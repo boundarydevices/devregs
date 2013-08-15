@@ -1,0 +1,5 @@
+devregs is a program designed to allow access to device registers through 
+/dev/mem.
+
+Refer to the sketchy notes in this blog post for details:
+	http://boundarydevices.com/i-mx5x-device-register-access/
