@@ -1,2 +1,2 @@
-bin_PROGRAMS = devregs
-devregs_SOURCES = devregs.cpp
+SUBDIRS = src
+EXTRA_DIST = autogen.sh
