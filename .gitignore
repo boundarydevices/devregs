@@ -9,3 +9,10 @@ missing
 src/Makefile.in
 src/devregs.o
 src/devregs
+Makefile
+config.guess
+config.log
+config.status
+config.sub
+src/.deps/
+src/Makefile
