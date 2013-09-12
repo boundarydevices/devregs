@@ -201,7 +201,9 @@ enum ftState {
 static char const *getDataPath(unsigned cpu) {
 	switch (cpu & 0xff000) {
 		case 0x63000:
-			return "/etc/devregs_imx6x.dat" ;
+			return "/etc/devregs_imx6q.dat" ;
+		case 0x61000:
+			return "/etc/devregs_imx6dls.dat" ;
 		case 0x53000:
 			return "/etc/devregs_imx53.dat" ;
 		default:
