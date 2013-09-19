@@ -15,5 +15,6 @@
 # Build control file for Bionic's test programs
 # define the BIONIC_TESTS environment variable to build the test programs
 #
+LOCAL_PATH := $(call my-dir)
 
 include $(call all-makefiles-under,$(LOCAL_PATH))
