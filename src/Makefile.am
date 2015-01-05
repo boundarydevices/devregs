@@ -1,4 +1,4 @@
 bin_PROGRAMS = devregs
 devregs_SOURCES = devregs.cpp
 
-sysconf_DATA = ../dat/*.dat
+sysconf_DATA = $(top_srcdir)/dat/*.dat
