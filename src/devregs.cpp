@@ -40,6 +40,7 @@
 #include <ctype.h>
 
 static bool word_access = false ;
+static int unsigned cpu_in_params = 0;
 
 struct fieldDescription_t {
 	char const 		   *name ;
@@ -586,17 +587,54 @@ static void putReg(struct reglist_t const *reg,unsigned long value){
 	printf( "0x%08lx\n", value );
 }
 
-static void parseArgs( int &argc, char const **argv )
+static void printUsage(void) {
+	printf("Usage: devregs [-w] [-c CPUNAME]\n");
+	puts("  -w   Using word access\n"
+		 "  -c CPUNAME in case the revision is not readable in /proc/cpuinfo fixit manually with :\n"
+			"\timx6q\n"
+			"\timx6dls\n"
+			"\timx53\n"
+		 );
+	exit(1);
+}
+
+static unsigned parseArgs( int &argc, char const **argv )
 {
+	unsigned parse_arguments = 0;
 	for( int arg = 1 ; arg < argc ; arg++ ){
 		if( '-' == *argv[arg] ){
 			char const *param = argv[arg]+1 ;
 			if( 'w' == tolower(*param) ){
-            			word_access = true ;
-				printf("using word access\n" );
+				word_access = true ;
+				printf("Using word access\n" );
+				parse_arguments++;
 			}
-			else
+			else if ( 'c' == tolower(*param) ) {
+				if(!argv[arg+1]){
+					fprintf(stderr,"Do not forget to specify CPUNAME\n");
+					printUsage();
+				}
+				if(!strcmp(argv[arg+1],"imx6q")){
+					printf("Fixing cpu to %s\n","imx6q");
+					cpu_in_params = 0x63000;
+					parse_arguments+=2;
+				}else if(!strcmp(argv[arg+1],"imx6dls")) {
+					printf("Fixing cpu to %s\n","imx6dls");
+					cpu_in_params = 0x61000;
+					parse_arguments+=2;
+				}else if(!strcmp(argv[arg+1],"imx53")) {
+					printf("Fixing cpu to %s\n","imx53");
+					cpu_in_params = 0x53000;
+					parse_arguments+=2;
+				}else {
+					printf("Unable to interpret cpu name %s\n",argv[arg+1]);
+					printUsage();
+				}
+			}
+			else{
 				printf( "unknown option %s\n", param );
+				printUsage();
+			}
 
 			// pull from argument list
 			for( int j = arg+1 ; j < argc ; j++ ){
@@ -606,6 +644,7 @@ static void parseArgs( int &argc, char const **argv )
 			--argc ;
 		}
 	}
+	return parse_arguments;
 }
 
 static int getcpu(unsigned &cpu) {
@@ -637,15 +676,17 @@ static int getcpu(unsigned &cpu) {
 int main(int argc, char const **argv)
 {
 	unsigned cpu ;
+	unsigned parse_arguments = 0;
 
-	parseArgs(argc,argv);
-
-	if (!getcpu(cpu)) {
+	parse_arguments = parseArgs(argc,argv);
+	if (!cpu_in_params && !getcpu(cpu)) {
 		fprintf(stderr, "Error reading CPU type\n");
+		fprintf(stderr, "Try to fixit using -c option\n");
 		return -1 ;
 	}
-//	printf( "CPU type is 0x%x\n", cpu);
-        registerDefs(cpu);
+	cpu = cpu_in_params;
+	//printf( "CPU type is 0x%x\n", cpu);
+	registerDefs(cpu);
 	if( 1 == argc ){
                 struct reglist_t const *defs = registerDefs();
 		while(defs){
@@ -653,16 +694,16 @@ int main(int argc, char const **argv)
 			defs = defs->next ;
 		}
 	} else {
-                struct reglist_t const *regs = parseRegisterSpec(argv[1]);
+                struct reglist_t const *regs = parseRegisterSpec(argv[parse_arguments]);
 		if( regs ){
-			if( 2 == argc ){
+			if( 2 == (argc-parse_arguments+1) ){
 				while( regs ){
 					showReg(regs);
 					regs = regs->next ;
 				}
 			} else {
 				char *end ;
-				unsigned long value = strtoul(argv[2],&end,16);
+				unsigned long value = strtoul(argv[1+parse_arguments],&end,16);
 				if( '\0' == *end ){
 					while( regs ){
 						showReg(regs);
@@ -670,10 +711,10 @@ int main(int argc, char const **argv)
 						regs = regs->next ;
 					}
 				} else 
-					fprintf( stderr, "Invalid value '%s', use hex\n", argv[2] );
+					fprintf( stderr, "Invalid value '%s', use hex\n", argv[1+parse_arguments] );
 			}
 		} else
-			fprintf (stderr, "Nothing matched %s\n", argv[1]);
+			fprintf (stderr, "Nothing matched %s\n", argv[parse_arguments]);
 	}
 	return 1;
 }
