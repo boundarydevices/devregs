@@ -208,6 +208,8 @@ static char const *getDataPath(unsigned cpu) {
 		case 0x53000:
 			return "/etc/devregs_imx53.dat" ;
 		default:
+			if (cpu == 0x10)
+				return "/etc/devregs_imx6q.dat";
 			printf("unsupported CPU type: %x\n", cpu);
 	}
 	return "/etc/devregs.dat" ;
@@ -217,11 +219,14 @@ static struct reglist_t const *registerDefs(unsigned cputype = 0){
 	static struct reglist_t *regs = 0 ;
 	if( 0 == regs ){
 		struct reglist_t *head = 0, *tail = 0 ;
-		FILE *fDefs = fopen(getDataPath(cputype), "rt");
+		const char *filename = getDataPath(cputype);
+		FILE *fDefs = fopen(filename, "rt");
 		if( fDefs ){
                         enum ftState state = FT_UNKNOWN ;
 			char inBuf[256];
 			int lineNum = 0 ;
+
+//			printf("Using %s\n", filename);
 			while( fgets(inBuf,sizeof(inBuf),fDefs) ){
 				lineNum++ ;
 				// skip unprintables
@@ -282,7 +287,7 @@ static struct reglist_t const *registerDefs(unsigned cputype = 0){
 						else
 							fprintf(stderr, "expecting hex digit, not %02x\n", (unsigned char)*next );
 					}
-					fprintf(stderr, "%s: syntax error on line %u <%s>\n", getDataPath(cputype), lineNum,next );
+					fprintf(stderr, "%s: syntax error on line %u <%s>\n", filename, lineNum,next );
 				} else if((':' == *next) && (FT_UNKNOWN != state)) {
                                         next=skipSpaces(next+1);
 					char *start = next++ ;
@@ -351,7 +356,7 @@ static struct reglist_t const *registerDefs(unsigned cputype = 0){
 			fclose(fDefs);
 			regs = head ;
 		} else 
-			perror(getDataPath(cputype));
+			perror(filename);
 	}
 	return regs ;
 }
@@ -647,28 +652,54 @@ static unsigned parseArgs( int &argc, char const **argv )
 	return parse_arguments;
 }
 
+
+static int get_rev(char * inBuf, const char* match, unsigned *pcpu)
+{
+	int rc = -1;
+	char *rev = strstr(inBuf, match);
+
+//	printf("%s\n", inBuf);
+	if (rev && (0 != (rev=strchr(rev, ':')))) {
+		char *next = rev + 2;
+		unsigned cpu = 0;
+		while (isxdigit(*next)) {
+			cpu <<= 4 ;
+			unsigned char c = toupper(*next++);
+			if (('0' <= c)&&('9' >= c)) {
+				cpu |= (c-'0');
+			} else {
+				cpu |= (10+(c-'A'));
+			}
+		}
+		*pcpu = cpu;
+		rc = 0;
+	}
+	return rc;
+}
+
 static int getcpu(unsigned &cpu) {
+	int processor_cnt = 0;
 	cpu = 0 ;
 	FILE *fIn = fopen("/proc/cpuinfo", "r");
 	if (fIn) {
 		char inBuf[512];
 		while (fgets(inBuf,sizeof(inBuf),fIn)) {
-			char *rev = strstr(inBuf,"Revision");
-			if (rev && (0 != (rev=strchr(rev+7,':')))) {
-				char *next = rev+2;
-				char *end = inBuf+strlen(inBuf);
-				while (isxdigit(*next)) {
-					cpu <<= 4 ;
-					unsigned char c = toupper(*next++);
-					if (('0' <= c)&&('9' >= c)) {
-						cpu |= (c-'0');
-					} else {
-						cpu |= (10+(c-'A'));
-					}
-				}
-			}
+			if (!get_rev(inBuf, "Revision", &cpu))
+				if (cpu != 0x10)
+					break;
+			if (!get_rev(inBuf, "revision", &cpu))
+				if (cpu != 0x10)
+					break;
+			if (strstr(inBuf, "processor"))
+				processor_cnt++;
 		}
 		fclose(fIn);
+	}
+	if ((cpu == 0x10) || !cpu) {
+		if ((processor_cnt == 1) || (processor_cnt == 2))
+			cpu = 0x61000;
+		else if (processor_cnt == 4)
+			cpu = 0x63000;
 	}
 	return (0 != cpu);
 }
