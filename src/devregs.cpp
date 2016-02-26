@@ -603,53 +603,53 @@ static void printUsage(void) {
 	exit(1);
 }
 
-static unsigned parseArgs( int &argc, char const **argv )
+static void parseArgs( int &argc, char const **argv )
 {
-	unsigned parse_arguments = 0;
-	for( int arg = 1 ; arg < argc ; arg++ ){
-		if( '-' == *argv[arg] ){
-			char const *param = argv[arg]+1 ;
-			if( 'w' == tolower(*param) ){
+	int arg = 1;
+
+	while (arg < argc) {
+		char const *p = argv[arg];
+		if ('-' == *p++ ) {
+			unsigned skip = 1;
+			if ('w' == tolower(*p)) {
 				word_access = true ;
 				printf("Using word access\n" );
-				parse_arguments++;
-			}
-			else if ( 'c' == tolower(*param) ) {
-				if(!argv[arg+1]){
+			} else if ('c' == tolower(*p)) {
+				p = argv[arg + skip];
+				if (!p){
 					fprintf(stderr,"Do not forget to specify CPUNAME\n");
 					printUsage();
 				}
-				if(!strcmp(argv[arg+1],"imx6q")){
+				if(!strcmp(p, "imx6q")){
+					skip++;
 					printf("Fixing cpu to %s\n","imx6q");
 					cpu_in_params = 0x63000;
-					parse_arguments+=2;
-				}else if(!strcmp(argv[arg+1],"imx6dls")) {
+				} else if(!strcmp(p, "imx6dls")) {
+					skip++;
 					printf("Fixing cpu to %s\n","imx6dls");
 					cpu_in_params = 0x61000;
-					parse_arguments+=2;
-				}else if(!strcmp(argv[arg+1],"imx53")) {
+				} else if(!strcmp(p, "imx53")) {
+					skip++;
 					printf("Fixing cpu to %s\n","imx53");
 					cpu_in_params = 0x53000;
-					parse_arguments+=2;
-				}else {
-					printf("Unable to interpret cpu name %s\n",argv[arg+1]);
+				} else {
+					printf("Unable to interpret cpu name %s\n", p);
 					printUsage();
 				}
-			}
-			else{
-				printf( "unknown option %s\n", param );
+			} else{
+				printf( "unknown option %s\n", p);
 				printUsage();
 			}
 
 			// pull from argument list
-			for( int j = arg+1 ; j < argc ; j++ ){
-				argv[j-1] = argv[j];
+			argc -= skip;
+			for (int j = arg; j < argc; j++) {
+				argv[j] = argv[j + skip];
 			}
-			--arg ;
-			--argc ;
+			continue;
 		}
+		arg++;
 	}
-	return parse_arguments;
 }
 
 
@@ -707,9 +707,9 @@ static int getcpu(unsigned &cpu) {
 int main(int argc, char const **argv)
 {
 	unsigned cpu ;
-	unsigned parse_arguments = 0;
+	unsigned parse_arguments = 1;
 
-	parse_arguments = parseArgs(argc,argv) + 1;
+	parseArgs(argc,argv);
 	if (!cpu_in_params && !getcpu(cpu)) {
 		fprintf(stderr, "Error reading CPU type\n");
 		fprintf(stderr, "Try to fixit using -c option\n");
