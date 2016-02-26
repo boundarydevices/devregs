@@ -709,13 +709,14 @@ int main(int argc, char const **argv)
 	unsigned cpu ;
 	unsigned parse_arguments = 0;
 
-	parse_arguments = parseArgs(argc,argv);
+	parse_arguments = parseArgs(argc,argv) + 1;
 	if (!cpu_in_params && !getcpu(cpu)) {
 		fprintf(stderr, "Error reading CPU type\n");
 		fprintf(stderr, "Try to fixit using -c option\n");
 		return -1 ;
 	}
-	cpu = cpu_in_params;
+	if (cpu_in_params)
+		cpu = cpu_in_params;
 	//printf( "CPU type is 0x%x\n", cpu);
 	registerDefs(cpu);
 	if( 1 == argc ){
