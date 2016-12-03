@@ -210,6 +210,8 @@ static char const *getDataPath(unsigned cpu) {
 		default:
 			if (cpu == 0x10)
 				return "/etc/devregs_imx6q.dat";
+			if (cpu == 5)
+				return "/etc/devregs_imx51.dat";
 			printf("unsupported CPU type: %x\n", cpu);
 	}
 	return "/etc/devregs.dat" ;
@@ -278,7 +280,7 @@ static struct reglist_t const *registerDefs(unsigned cputype = 0){
 									head = newone ;
 								tail = newone ;
                                                                 state = FT_REGISTER ;
-//								printf( "%s: 0x%x, width %u\n", newone->reg->name, newone->address, newone->width);
+//								printf( "%s: 0x%lx, width %u\n", newone->reg->name, newone->address, newone->width);
 								continue;
 							}
 							else
@@ -372,6 +374,7 @@ static struct reglist_t const *parseRegisterSpec(char const *regname)
 		char *fieldPart = strchr(regPart,'.');
 		bool widthspec = false ;
 		unsigned fieldLen = 0 ;
+
 		if (0 == fieldPart) {
 			fieldPart = strchr(regPart,':');
 			widthspec = false ;
