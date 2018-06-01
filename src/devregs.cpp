@@ -501,7 +501,7 @@ static int getFd(void){
 #define MAP_SIZE 4096
 #define MAP_MASK ( MAP_SIZE - 1 )
 
-static unsigned long volatile *getReg(unsigned long addr){
+static unsigned volatile *getReg(unsigned long addr){
 	static void *map = 0 ;
 	static unsigned prevPage = -1U ;
 	unsigned page = addr & ~MAP_MASK ;
@@ -517,10 +517,10 @@ static unsigned long volatile *getReg(unsigned long addr){
 		prevPage = page ;
 	}
 	unsigned offs = addr & MAP_MASK ;
-	return (unsigned long volatile *)((char *)map+offs);
+	return (unsigned volatile *)((char *)map+offs);
 }
 
-static unsigned fieldVal(struct fieldDescription_t *f, unsigned long v)
+static unsigned fieldVal(struct fieldDescription_t *f, unsigned v)
 {
 	v >>= f->startbit ;
 	v &= (1<<f->bitcount)-1 ;
@@ -529,14 +529,14 @@ static unsigned fieldVal(struct fieldDescription_t *f, unsigned long v)
 
 static void showReg(struct reglist_t const *reg)
 {
-	unsigned long rv ; 
-        unsigned long volatile *regPtr = getReg(reg->address);
+	unsigned rv ; 
+        unsigned volatile *regPtr = getReg(reg->address);
 	if( 2 == reg->width ) {
 		unsigned short volatile *p = (unsigned short volatile *)regPtr ;
 		rv = *p ;
 		printf( "%s:0x%08lx\t=0x%04lx\n", reg->reg ? reg->reg->name : "", reg->address, rv );
 	} else if( 4 == reg->width ) {
-		unsigned long volatile *p = regPtr ;
+		unsigned volatile *p = regPtr ;
 		rv = *p ;
 		printf( "%s:0x%08lx\t=0x%08lx\n", reg->reg ? reg->reg->name : "", reg->address, rv );
 	} else if( 1 == reg->width ) {
@@ -557,10 +557,10 @@ static void showReg(struct reglist_t const *reg)
 	}
 }
 
-static void putReg(struct reglist_t const *reg,unsigned long value){
+static void putReg(struct reglist_t const *reg,unsigned value){
 	unsigned address = 0 ;
 	unsigned shift = 0 ;
-	unsigned long mask = 0xffffffff ;
+	unsigned mask = 0xffffffff ;
 	if (reg->fields) {
 		// Only single field allowed
 		if (0 == reg->fields->next) {
@@ -571,7 +571,7 @@ static void putReg(struct reglist_t const *reg,unsigned long value){
 			return ;
 		}
 	}
-	unsigned long maxValue = mask >> shift ;
+	unsigned maxValue = mask >> shift ;
 	if (value > maxValue) {
 		fprintf(stderr, "Value 0x%lx exceeds max 0x%lx for register %s\n", value, maxValue, reg->reg->name);
 		return ;
@@ -587,7 +587,7 @@ static void putReg(struct reglist_t const *reg,unsigned long value){
 		printf( "%s:0x%04lx == 0x%04x...", reg->reg ? reg->reg->name : "", reg->address, *rv );
 		*rv = value ;
 	} else {
-		unsigned long volatile * const rv = getReg(reg->address);
+		unsigned volatile * const rv = getReg(reg->address);
 		value = (*rv&~mask) | ((value<<shift)&mask);
 		printf( "%s:0x%08lx == 0x%08lx...", reg->reg ? reg->reg->name : "", reg->address, *rv );
 		*rv = value ;
@@ -738,7 +738,7 @@ int main(int argc, char const **argv)
 				}
 			} else {
 				char *end ;
-				unsigned long value = strtoul(argv[1+parse_arguments],&end,16);
+				unsigned value = strtoul(argv[1+parse_arguments],&end,16);
 				if( '\0' == *end ){
 					while( regs ){
 						showReg(regs);
