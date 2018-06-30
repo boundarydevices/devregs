@@ -207,12 +207,17 @@ static char const *getDataPath(unsigned cpu) {
 			return "/etc/devregs_imx6dls.dat" ;
 		case 0x53000:
 			return "/etc/devregs_imx53.dat" ;
-		default:
-			if (cpu == 0x10)
-				return "/etc/devregs_imx6q.dat";
-			if (cpu == 5)
-				return "/etc/devregs_imx51.dat";
-			printf("unsupported CPU type: %x\n", cpu);
+	}
+	switch (cpu) {
+	case 0x10:
+		return "/etc/devregs_imx6q.dat";
+	case 0x51:
+	case 0x5:
+		return "/etc/devregs_imx51.dat";
+	case 0x7:
+		return "/etc/devregs_imx7d.dat";
+	default:
+		printf("unsupported CPU type: %x\n", cpu);
 	}
 	return "/etc/devregs.dat" ;
 }
@@ -687,11 +692,19 @@ static int getcpu(unsigned &cpu) {
 	if (fIn) {
 		char inBuf[512];
 		while (fgets(inBuf,sizeof(inBuf),fIn)) {
+			if (strstr(inBuf, "i.MX7")) {
+				cpu = 0x7;
+				break;
+			}
+			if (strstr(inBuf, "i.MX51")) {
+				cpu = 0x51;
+				break;
+			}
 			if (!get_rev(inBuf, "Revision", &cpu))
 				if (cpu != 0x10)
 					break;
 			if (!get_rev(inBuf, "revision", &cpu))
-				if (cpu != 0x10)
+				if ((cpu != 0x10) && (cpu != 5))
 					break;
 			if (strstr(inBuf, "processor"))
 				processor_cnt++;
