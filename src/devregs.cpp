@@ -534,15 +534,15 @@ static void showReg(struct reglist_t const *reg)
 	if( 2 == reg->width ) {
 		unsigned short volatile *p = (unsigned short volatile *)regPtr ;
 		rv = *p ;
-		printf( "%s:0x%08lx\t=0x%04lx\n", reg->reg ? reg->reg->name : "", reg->address, rv );
+		printf( "%s:0x%08lx\t=0x%04x\n", reg->reg ? reg->reg->name : "", reg->address, rv );
 	} else if( 4 == reg->width ) {
 		unsigned volatile *p = regPtr ;
 		rv = *p ;
-		printf( "%s:0x%08lx\t=0x%08lx\n", reg->reg ? reg->reg->name : "", reg->address, rv );
+		printf( "%s:0x%08lx\t=0x%08x\n", reg->reg ? reg->reg->name : "", reg->address, rv );
 	} else if( 1 == reg->width ) {
 		unsigned char volatile *p = (unsigned char volatile *)regPtr ;
 		rv = *p ;
-		printf( "%s:0x%08lx\t=0x%02lx\n", reg->reg ? reg->reg->name : "", reg->address, rv );
+		printf( "%s:0x%08lx\t=0x%02x\n", reg->reg ? reg->reg->name : "", reg->address, rv );
 	}
 	else {
 		fprintf(stderr, "Unsupported width in register %s\n", reg->reg->name);
@@ -573,7 +573,7 @@ static void putReg(struct reglist_t const *reg,unsigned value){
 	}
 	unsigned maxValue = mask >> shift ;
 	if (value > maxValue) {
-		fprintf(stderr, "Value 0x%lx exceeds max 0x%lx for register %s\n", value, maxValue, reg->reg->name);
+		fprintf(stderr, "Value 0x%x exceeds max 0x%x for register %s\n", value, maxValue, reg->reg->name);
 		return ;
 	}
 	if( 1 == reg->width ){
@@ -589,10 +589,10 @@ static void putReg(struct reglist_t const *reg,unsigned value){
 	} else {
 		unsigned volatile * const rv = getReg(reg->address);
 		value = (*rv&~mask) | ((value<<shift)&mask);
-		printf( "%s:0x%08lx == 0x%08lx...", reg->reg ? reg->reg->name : "", reg->address, *rv );
+		printf( "%s:0x%08lx == 0x%08x...", reg->reg ? reg->reg->name : "", reg->address, *rv );
 		*rv = value ;
 	}
-	printf( "0x%08lx\n", value );
+	printf( "0x%08x\n", value );
 }
 
 static void printUsage(void) {
