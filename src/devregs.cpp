@@ -216,6 +216,8 @@ static char const *getDataPath(unsigned cpu) {
 		return "/etc/devregs_imx51.dat";
 	case 0x7:
 		return "/etc/devregs_imx7d.dat";
+	case 0x81:
+		return "/etc/devregs_imx8mq.dat";
 	default:
 		printf("unsupported CPU type: %x\n", cpu);
 	}
@@ -604,6 +606,7 @@ static void printUsage(void) {
 	printf("Usage: devregs [-w] [-c CPUNAME]\n");
 	puts("  -w   Using word access\n"
 		 "  -c CPUNAME in case the revision is not readable in /proc/cpuinfo fixit manually with :\n"
+			"\timx8mq\n"
 			"\timx7d\n"
 			"\timx6q\n"
 			"\timx6dls\n"
@@ -645,6 +648,10 @@ static void parseArgs( int &argc, char const **argv )
 					skip++;
 					printf("Fixing cpu to %s\n","imx7d");
 					cpu_in_params = 0x7;
+				} else if(!strcmp(p, "imx8mq")) {
+					skip++;
+					printf("Fixing cpu to %s\n","imx8mq");
+					cpu_in_params = 0x81;
 				} else {
 					printf("Unable to interpret cpu name %s\n", p);
 					printUsage();
@@ -703,6 +710,10 @@ static int getcpu(unsigned &cpu, const char *path) {
 			}
 			if (strstr(inBuf, "i.MX51")) {
 				cpu = 0x51;
+				break;
+			}
+			if (strstr(inBuf, "i.MX8MQ")) {
+				cpu = 0x81;
 				break;
 			}
 			if (!get_rev(inBuf, "Revision", &cpu))
