@@ -604,6 +604,7 @@ static void printUsage(void) {
 	printf("Usage: devregs [-w] [-c CPUNAME]\n");
 	puts("  -w   Using word access\n"
 		 "  -c CPUNAME in case the revision is not readable in /proc/cpuinfo fixit manually with :\n"
+			"\timx7d\n"
 			"\timx6q\n"
 			"\timx6dls\n"
 			"\timx53\n"
@@ -640,6 +641,10 @@ static void parseArgs( int &argc, char const **argv )
 					skip++;
 					printf("Fixing cpu to %s\n","imx53");
 					cpu_in_params = 0x53000;
+				} else if(!strcmp(p, "imx7d")) {
+					skip++;
+					printf("Fixing cpu to %s\n","imx7d");
+					cpu_in_params = 0x7;
 				} else {
 					printf("Unable to interpret cpu name %s\n", p);
 					printUsage();
