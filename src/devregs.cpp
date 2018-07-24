@@ -685,10 +685,10 @@ static int get_rev(char * inBuf, const char* match, unsigned *pcpu)
 	return rc;
 }
 
-static int getcpu(unsigned &cpu) {
+static int getcpu(unsigned &cpu, const char *path) {
 	int processor_cnt = 0;
 	cpu = 0 ;
-	FILE *fIn = fopen("/proc/cpuinfo", "r");
+	FILE *fIn = fopen(path, "r");
 	if (fIn) {
 		char inBuf[512];
 		while (fgets(inBuf,sizeof(inBuf),fIn)) {
@@ -726,7 +726,8 @@ int main(int argc, char const **argv)
 	unsigned parse_arguments = 1;
 
 	parseArgs(argc,argv);
-	if (!cpu_in_params && !getcpu(cpu)) {
+	if (!cpu_in_params && !getcpu(cpu, "/sys/devices/soc0/soc_id") &&
+	    !getcpu(cpu, "/proc/cpuinfo")) {
 		fprintf(stderr, "Error reading CPU type\n");
 		fprintf(stderr, "Try to fixit using -c option\n");
 		return -1 ;
