@@ -39,6 +39,8 @@
 #include <fcntl.h>
 #include <ctype.h>
 
+typedef off_t phys_addr_t;
+
 static bool word_access = false ;
 static int unsigned cpu_in_params = 0;
 
@@ -55,7 +57,7 @@ struct registerDescription_t {
 };
 
 struct reglist_t {
-	unsigned long 			 address ;
+	phys_addr_t 			address ;
 	unsigned		 	 width ; // # bytes in register
 	struct registerDescription_t	*reg ;
 	struct fieldDescription_t	*fields ;
@@ -253,7 +255,7 @@ static struct reglist_t const *registerDefs(unsigned cputype = 0){
 						next=skipSpaces(next);
 						if(isxdigit(*next)){
 							char *addrEnd ;
-							unsigned long addr = strtoul(next,&addrEnd,16);
+							phys_addr_t addr = (phys_addr_t )strtoul(next,&addrEnd,16);
 							unsigned width = 4 ;
 							if( addrEnd && ('.' == *addrEnd) ){
 								char widthchar = tolower(addrEnd[1]);
@@ -287,7 +289,7 @@ static struct reglist_t const *registerDefs(unsigned cputype = 0){
 									head = newone ;
 								tail = newone ;
                                                                 state = FT_REGISTER ;
-//								printf( "%s: 0x%lx, width %u\n", newone->reg->name, newone->address, newone->width);
+//								printf( "%s: 0x%08lx, width %u\n", newone->reg->name, newone->address, newone->width);
 								continue;
 							}
 							else
@@ -433,7 +435,7 @@ static struct reglist_t const *parseRegisterSpec(char const *regname)
 		return out ;
 	} else if(isdigit(c)){
 		char *end ;
-		unsigned long address = strtoul(regname,&end,16);
+		phys_addr_t address = (phys_addr_t)strtoul(regname,&end,16);
 		if( (0 == *end) || (':' == *end) || ('.' == *end) ){
                         struct fieldDescription_t *field = 0 ;
 			unsigned start, count ;
@@ -508,10 +510,11 @@ static int getFd(void){
 #define MAP_SIZE 4096
 #define MAP_MASK ( MAP_SIZE - 1 )
 
-static unsigned volatile *getReg(unsigned long addr){
+static unsigned volatile *getReg(phys_addr_t addr){
 	static void *map = 0 ;
-	static unsigned prevPage = -1U ;
-	unsigned page = addr & ~MAP_MASK ;
+	static phys_addr_t prevPage = -1U ;
+	unsigned offs = addr & MAP_MASK ;
+	phys_addr_t page = addr - offs;
 	if( page != prevPage ){
 		if( map ){
 		   munmap(map,MAP_SIZE);
@@ -523,7 +526,6 @@ static unsigned volatile *getReg(unsigned long addr){
 		}
 		prevPage = page ;
 	}
-	unsigned offs = addr & MAP_MASK ;
 	return (unsigned volatile *)((char *)map+offs);
 }
 
@@ -565,7 +567,6 @@ static void showReg(struct reglist_t const *reg)
 }
 
 static void putReg(struct reglist_t const *reg,unsigned value){
-	unsigned address = 0 ;
 	unsigned shift = 0 ;
 	unsigned mask = 0xffffffff ;
 	if (reg->fields) {
@@ -586,12 +587,12 @@ static void putReg(struct reglist_t const *reg,unsigned value){
 	if( 1 == reg->width ){
 		unsigned char volatile * const rv = (unsigned char volatile *)getReg(reg->address);
 		value = (*rv&~mask) | ((value<<shift)&mask);
-		printf( "%s:0x%02lx == 0x%02x...", reg->reg ? reg->reg->name : "", reg->address, *rv );
+		printf( "%s:0x%08lx == 0x%02x...", reg->reg ? reg->reg->name : "", reg->address, *rv );
 		*rv = value ;
 	} else if( 2 == reg->width ){
 		unsigned short volatile * const rv = (unsigned short volatile *)getReg(reg->address);
 		value = (*rv&~mask) | ((value<<shift)&mask);
-		printf( "%s:0x%04lx == 0x%04x...", reg->reg ? reg->reg->name : "", reg->address, *rv );
+		printf( "%s:0x%08lx == 0x%04x...", reg->reg ? reg->reg->name : "", reg->address, *rv );
 		*rv = value ;
 	} else {
 		unsigned volatile * const rv = getReg(reg->address);
