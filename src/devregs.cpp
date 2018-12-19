@@ -197,7 +197,21 @@ enum ftState {
 	FT_FIELDSET	= 1
 };
 
-static char const *getDataPath(unsigned cpu) {
+static const char *getDataPath(unsigned cpu, char *socname) {
+	const char *devreg_dft = "/etc/devregs";
+	char *socname_buf;
+	unsigned nb_char;
+
+	if (socname) {
+		//size of sting:<devreg_dft>_<socname>.dat + EOS
+		socname_buf = strdup(socname);
+		nb_char = strlen(devreg_dft) + strlen(socname) + 6;
+		socname = (char *) realloc(socname, sizeof(*socname) * nb_char);
+		snprintf(socname, nb_char, "%s_%s.dat", devreg_dft, socname_buf);
+		free(socname_buf);
+		return socname;
+	}
+
 	switch (cpu & 0xff000) {
 		case 0x63000:
 			return "/etc/devregs_imx6q.dat" ;
@@ -224,11 +238,12 @@ static char const *getDataPath(unsigned cpu) {
 	return "/etc/devregs.dat" ;
 }
 
-static struct reglist_t const *registerDefs(unsigned cputype = 0){
+static struct reglist_t const *registerDefs(unsigned cputype = 0, char *socname = 0){
 	static struct reglist_t *regs = 0 ;
+
 	if( 0 == regs ){
 		struct reglist_t *head = 0, *tail = 0 ;
-		const char *filename = getDataPath(cputype);
+		const char *filename = getDataPath(cputype, socname);
 		FILE *fDefs = fopen(filename, "rt");
 		if( fDefs ){
                         enum ftState state = FT_UNKNOWN ;
@@ -730,6 +745,46 @@ static int get_rev(char * inBuf, const char* match, unsigned *pcpu)
 	return rc;
 }
 
+/*
+ * use device tree compatible of root
+ * find soc name of first occurence
+ * compatible format:
+ *  <manufaturer>,<soc_name>-<extension>
+ *  extension could be optional
+ */
+static int of_get_socname(char **soc_name) {
+	FILE *fIn = fopen("/proc/device-tree/compatible", "r");
+	char inBuf[512];
+	char *manuf, *soc, *soc_ext;
+	int ret = 0;
+
+	if (!fIn)
+		return 0;
+
+	if (!fgets(inBuf,sizeof(inBuf),fIn))
+		return 0;
+
+	manuf = strtok(inBuf, ",");
+
+	if (!manuf)
+		goto out;
+
+	soc_ext = strtok(NULL, ",");
+	if (!soc_ext)
+		goto out;
+
+	soc = strtok(soc_ext, "-");
+
+	if (soc) {
+		*soc_name = strdup(soc);
+		ret = 1;
+	}
+
+out:
+	fclose(fIn);
+	return ret;
+}
+
 static int getcpu(unsigned &cpu, const char *path) {
 	int processor_cnt = 0;
 	cpu = 0 ;
@@ -780,11 +835,13 @@ static int getcpu(unsigned &cpu, const char *path) {
 int main(int argc, char const **argv)
 {
 	unsigned cpu ;
+	char *soc_name = NULL;
 	unsigned parse_arguments = 1;
 
 	parseArgs(argc,argv);
-	if (!cpu_in_params && !getcpu(cpu, "/sys/devices/soc0/soc_id") &&
-	    !getcpu(cpu, "/proc/cpuinfo")) {
+	if (!cpu_in_params && !of_get_socname(&soc_name) &&
+		!getcpu(cpu, "/sys/devices/soc0/soc_id") &&
+		!getcpu(cpu, "/proc/cpuinfo")) {
 		fprintf(stderr, "Error reading CPU type\n");
 		fprintf(stderr, "Try to fixit using -c option\n");
 		return -1 ;
@@ -792,7 +849,7 @@ int main(int argc, char const **argv)
 	if (cpu_in_params)
 		cpu = cpu_in_params;
 	//printf( "CPU type is 0x%x\n", cpu);
-	registerDefs(cpu);
+	registerDefs(cpu, soc_name);
 	if( 1 == argc ){
                 struct reglist_t const *defs = registerDefs();
 		while(defs){
@@ -822,5 +879,8 @@ int main(int argc, char const **argv)
 		} else
 			fprintf (stderr, "Nothing matched %s\n", argv[parse_arguments]);
 	}
+
+	free(soc_name);
+
 	return 1;
 }
