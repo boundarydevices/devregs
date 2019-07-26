@@ -70,10 +70,6 @@ struct	fieldSet_t {
         struct	fieldSet_t 		*next ;
 };
 
-static char const devregsPath[] = {
-	"/etc/devregs.dat"
-};
-
 static struct fieldSet_t *fieldsets = 0 ;
 
 /* 
@@ -184,8 +180,6 @@ static struct fieldDescription_t *parseFields
 }
 
 /*
- * registerDefs()	- parses register specs from devRegsPath
- *
  *	- Outer loop determines which type of line we're dealing with
  *	based on the first character:
  *		A-Za-z_		- Register:	Name	0xADDRESS[.w|.l|.b]
@@ -220,6 +214,8 @@ static char const *getDataPath(unsigned cpu) {
 		return "/etc/devregs_imx7d.dat";
 	case 0x81:
 		return "/etc/devregs_imx8mq.dat";
+	case 0x82:
+		return "/etc/devregs_imx8mm.dat";
 	default:
 		printf("unsupported CPU type: %x\n", cpu);
 	}
@@ -715,6 +711,10 @@ static int getcpu(unsigned &cpu, const char *path) {
 			}
 			if (strstr(inBuf, "i.MX8MQ")) {
 				cpu = 0x81;
+				break;
+			}
+			if (strstr(inBuf, "i.MX8MM")) {
+				cpu = 0x82;
 				break;
 			}
 			if (!get_rev(inBuf, "Revision", &cpu))
