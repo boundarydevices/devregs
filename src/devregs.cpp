@@ -717,6 +717,10 @@ static int getcpu(unsigned &cpu, const char *path) {
 				cpu = 0x82;
 				break;
 			}
+			if (strstr(inBuf, "i.MX8MN")) {
+				cpu = 0x82;
+				break;
+			}
 			if (!get_rev(inBuf, "Revision", &cpu))
 				if (cpu != 0x10)
 					break;
