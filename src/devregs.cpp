@@ -43,6 +43,8 @@ typedef off_t phys_addr_t;
 
 static bool word_access = false ;
 static int unsigned cpu_in_params = 0;
+static bool fancy_color_mode = false;
+static bool stdout_tty = isatty(STDOUT_FILENO);
 
 struct fieldDescription_t {
 	char const 		   *name ;
@@ -532,6 +534,14 @@ static unsigned fieldVal(struct fieldDescription_t *f, unsigned v)
 	return v ;
 }
 
+#define RED	"\e[0;31m"
+#define GREEN	"\e[1;32m"
+#define BLUE	"\e[1;34m"
+#define YELLOW	"\e[1;33m"
+#define CYAN	"\e[0;36m"
+#define RST	"\e[1;0m"
+#define COL(_color)	(stdout_tty && fancy_color_mode ? _color : "")
+
 static void showReg(struct reglist_t const *reg)
 {
 	unsigned rv ; 
@@ -556,7 +566,21 @@ static void showReg(struct reglist_t const *reg)
 	fflush(stdout);
 	struct fieldDescription_t *f = reg->fields ;
 	while(f){
-		printf( "\t%-16s\t%2u-%2u\t=0x%x\n", f->name, f->startbit, f->startbit+f->bitcount-1, fieldVal(f,rv) );
+		printf("\t%s%-16s%s", COL(CYAN), f->name, COL(RST));
+		printf("\t%s%2u-%2u%s", COL(BLUE),  f->startbit, f->startbit+f->bitcount-1, COL(RST));
+		printf("\t=%s0x%x%s",  fieldVal(f,rv) ? COL(YELLOW) : "", fieldVal(f,rv), COL(RST));
+		if (fancy_color_mode) {
+			int len = f->bitcount;
+			unsigned b = fieldVal(f,rv);
+			printf("\t");
+			while (--len >= 0) {
+				if ((b >> len) & 1)
+					printf("%s%u%s", COL(GREEN), 1, COL(RST));
+				else
+					printf("%s%u%s", COL(RED), 0, COL(RST));
+			}
+		}
+		printf("\n");
 		fflush(stdout);
 		f=f->next ;
 	}
@@ -602,6 +626,7 @@ static void putReg(struct reglist_t const *reg,unsigned value){
 static void printUsage(void) {
 	printf("Usage: devregs [-w] [-c CPUNAME]\n");
 	puts("  -w   Using word access\n"
+		 "  -f fancy color mode (-ff to force, for e.g. pipe to less -r)\n"
 		 "  -c CPUNAME in case the revision is not readable in /proc/cpuinfo fixit manually with :\n"
 			"\timx8mm\n"
 			"\timx8mq\n"
@@ -624,6 +649,12 @@ static void parseArgs( int &argc, char const **argv )
 			if ('w' == tolower(*p)) {
 				word_access = true ;
 				printf("Using word access\n" );
+			} else if ('f' == tolower(*p)) {
+				fancy_color_mode = true ;
+				printf("Using fancy color mode\n");
+				if(!strcmp(argv[arg], "-ff"))
+					printf("Forcing fancy color mode\n");
+					stdout_tty = true;
 			} else if ('c' == tolower(*p)) {
 				p = argv[arg + skip];
 				if (!p){
